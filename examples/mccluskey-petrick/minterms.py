@@ -28,6 +28,19 @@ def implicants_to_asp(impls):
             asp_facts += "impl({0}, {1}). ".format(idx, m)
     return asp_facts
 
+def implicant_to_formula(impl):
+    f_terms = []
+    for term in impl:
+        ft = ""
+        a = term[0]
+        v = term[1]
+        if v == '0':
+            ft += "not "
+        if v != 'x':
+            ft += a
+            f_terms += [ ft ]
+    return "(" + " ^ ".join(f_terms) + ")"
+
 def input_to_asp(input_file):
     asp_facts = ""
     with open(input_file) as input_text:
@@ -124,9 +137,6 @@ def onmodel_petrick(m):
             im = str(sym.arguments[1])
             secondary_impls[m_id] += [ "impl({0}, {1}).".format(id, im) ]
 
-
-
-
 def prime_implicants_str(pm):
     res = ""
     for i,k in enumerate(pm.keys()):
@@ -166,8 +176,8 @@ def main():
 
     solve_mincover(implicants_to_asp(prime_implicants), ["0"])
 
+    essn_ids = []
     if len(essential_impls) > 0:
-        essn_ids = []
         print("ESSENTIAL IMPLICANTS:")
         for impl in essential_impls:
             id = parse_impl_id(impl)
@@ -180,19 +190,35 @@ def main():
         print("NO ESSENTIAL IMPLICANTS")
 
     if not mincover_total_coverage:
-        sec_ids = []
-        print("SECONDARY IMPLICANTS:")
+        print("\nSECONDARY IMPLICANTS:")
         solve_petrick(" ".join(petrick_impls), ["0"])
         print("There are {0} option(s) for the secondary implicants".format(len(secondary_impls)))
         for idx,sec in enumerate(secondary_impls):
-            print("\tOPTION {0}:".format(idx))
+            sec_ids = []
+            print("OPTION {0}:".format(idx))
             for impl in sec:
                 id = parse_impl_id(impl)
                 if int(id) not in sec_ids:
                     sec_ids += [ int(id) ]
                     keys = list(prime_implicants.keys())
                     key = keys[int(id)]
-                    print("\t["+id+"] "+implicant_str(key, prime_implicants[key]))
+                    print("["+id+"] "+implicant_str(key, prime_implicants[key]))
+
+            formula_ids = essn_ids + sec_ids
+            formula_ids.sort()
+            min_formula_terms = []
+            for fi in formula_ids:
+                impkey = list(prime_implicants.keys())[int(fi)]
+                min_formula_terms += [implicant_to_formula(prime_implicants[impkey])]
+            print("\nF{0} = ".format(idx) + " v ".join(min_formula_terms) + "\n")
+    else:
+        formula_ids = essn_ids
+        formula_ids.sort()
+        min_formula_terms = []
+        for fi in formula_ids:
+            impkey = list(prime_implicants.keys())[int(fi)]
+            min_formula_terms += [implicant_to_formula(prime_implicants[impkey])]
+        print("\nF0 = " + " v ".join(min_formula_terms)+ "\n")
 
 
 
