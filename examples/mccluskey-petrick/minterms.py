@@ -8,7 +8,7 @@ has_finished = False
 mincover_total_coverage = False
 essential_impls = []
 petrick_impls = []
-secondary_impls = [[]]
+secondary_impls = []
 petrick_total_coverage = False
 
 def atom_name(idx, start):
@@ -114,6 +114,7 @@ def onmodel_petrick(m):
     global petrick_total_coverage
 
     m_id = m.number-1
+    secondary_impls += [[]]
 
     for sym in m.symbols(shown=True):
         if sym.name == "total_coverage":
@@ -165,17 +166,21 @@ def main():
 
     solve_mincover(implicants_to_asp(prime_implicants), ["0"])
 
-    essn_ids = []
-    print("ESSENTIAL IMPLICANTS:")
-    for impl in essential_impls:
-        id = parse_impl_id(impl)
-        if int(id) not in essn_ids:
-            essn_ids += [ int(id) ]
-            keys = list(prime_implicants.keys())
-            key = keys[int(id)]
-            print("["+id+"] "+implicant_str(key, prime_implicants[key]))
+    if len(essential_impls) > 0:
+        essn_ids = []
+        print("ESSENTIAL IMPLICANTS:")
+        for impl in essential_impls:
+            id = parse_impl_id(impl)
+            if int(id) not in essn_ids:
+                essn_ids += [ int(id) ]
+                keys = list(prime_implicants.keys())
+                key = keys[int(id)]
+                print("["+id+"] "+implicant_str(key, prime_implicants[key]))
+    else:
+        print("NO ESSENTIAL IMPLICANTS")
 
     if not mincover_total_coverage:
+        sec_ids = []
         print("SECONDARY IMPLICANTS:")
         solve_petrick(" ".join(petrick_impls), ["0"])
         print("There are {0} option(s) for the secondary implicants".format(len(secondary_impls)))
@@ -183,8 +188,8 @@ def main():
             print("\tOPTION {0}:".format(idx))
             for impl in sec:
                 id = parse_impl_id(impl)
-                if int(id) not in essn_ids:
-                    essn_ids += [ int(id) ]
+                if int(id) not in sec_ids:
+                    sec_ids += [ int(id) ]
                     keys = list(prime_implicants.keys())
                     key = keys[int(id)]
                     print("\t["+id+"] "+implicant_str(key, prime_implicants[key]))
