@@ -23,7 +23,8 @@ def onmodel(m):
         elif sym.name == "move_dir":
             solution["movements"] += [(str(sym.arguments[0].name), sym.arguments[1].number)]
         elif sym.name == "player_on":
-            solution["boards"][sym.arguments[2]]
+            pass
+            #solution["boards"][sym.arguments[2].number]
     solution["movements"].sort(key=lambda y: y[1])
     solution["movements"] = [x[0] for x in solution["movements"]]
 
