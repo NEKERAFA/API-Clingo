@@ -1,4 +1,4 @@
-# McCluskey-Petrick in ASP
+# Quine-McCluskey-Petrick in ASP
 
 ## Usage
 Run ```python minterms.py INPUT_FILE```. Python 3.x and clingo 5.x are required.
@@ -13,4 +13,4 @@ remaining implicants to achieve total coverage. In the case of multiple possible
 The output provides all of the possible minimized functions.
 
 ## TO DO
-* Input files should contain boolean functions and not minterms? 
+* Input files should contain boolean functions and not minterms?
