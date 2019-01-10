@@ -47,7 +47,7 @@ def input_to_asp(input_file):
         for line in input_text:
             if re.match('^[01x]+\s*$', line):
                 m = line.strip()
-                i = int(m, 2)
+                i = int(m.replace('x','0'), 2)
                 for idx,bit in enumerate(m):
                     asp_facts += "m({0}, {1}, {2}). ".format(i, atom_name(idx, 'p'), bit)
                 asp_facts += "\n"
@@ -189,6 +189,8 @@ def main():
     else:
         print("NO ESSENTIAL IMPLICANTS")
 
+    min_formula = []
+    min_formula_size = 99999999999
     if not mincover_total_coverage:
         print("\nSECONDARY IMPLICANTS:")
         solve_petrick(" ".join(petrick_impls), ["0"])
@@ -210,7 +212,9 @@ def main():
             for fi in formula_ids:
                 impkey = list(prime_implicants.keys())[int(fi)]
                 min_formula_terms += [implicant_to_formula(prime_implicants[impkey])]
-            print("\nF{0} = ".format(idx) + " v ".join(min_formula_terms) + "\n")
+            min_formula += [ min_formula_terms ]
+            if len(min_formula_terms) < min_formula_size:
+                min_formula_size = len(min_formula_terms)
     else:
         formula_ids = essn_ids
         formula_ids.sort()
@@ -218,7 +222,13 @@ def main():
         for fi in formula_ids:
             impkey = list(prime_implicants.keys())[int(fi)]
             min_formula_terms += [implicant_to_formula(prime_implicants[impkey])]
-        print("\nF0 = " + " v ".join(min_formula_terms)+ "\n")
+        min_formula += [ min_formula_terms ]
+        min_formula_size = len(min_formula_terms)
+
+    for idx,ft in enumerate(min_formula):
+        if len(ft) == min_formula_size:
+            print("\nOPTION {0}:".format(idx))
+            print("F{0} = ".format(idx) + " v ".join(ft))
 
 
 
