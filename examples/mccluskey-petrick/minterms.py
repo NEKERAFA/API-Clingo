@@ -45,7 +45,7 @@ def input_to_asp(input_file):
     asp_facts = ""
     with open(input_file) as input_text:
         for line in input_text:
-            if re.match('^[01x]+\s*$', line):
+            if re.match('^[01]+\s*$', line):
                 m = line.strip()
                 i = int(m.replace('x','0'), 2)
                 for idx,bit in enumerate(m):
@@ -58,42 +58,27 @@ def solve_mccluskey(asp_facts, clingo_args):
     cc.add("base", [], asp_facts)
     cc.load("./asp/pair-maker.lp")
     cc.ground([("base", [])])
-    cc.solve(on_model=onmodel_mccluskey)
+    return cc.solve(on_model=onmodel_mccluskey)
 
 def solve_mincover(asp_facts, clingo_args):
     cc = clingo.Control(clingo_args)
     cc.add("base", [], asp_facts)
     cc.load("./asp/min-cover.lp")
     cc.ground([("base", [])])
-    cc.solve(on_model=onmodel_mincover)
+    return cc.solve(on_model=onmodel_mincover)
 
 def solve_petrick(asp_facts, clingo_args):
     cc = clingo.Control(clingo_args)
     cc.add("base", [], asp_facts)
     cc.load("./asp/petrick.lp")
     cc.ground([("base", [])])
-    cc.solve(on_model=onmodel_petrick)
+    return cc.solve(on_model=onmodel_petrick)
 
 def onmodel_mccluskey(m):
-    global steps
-    global has_finished
     global prime_implicants
 
-    sol_facts = ""
-    fin = False
-    pr_impl = []
-    for sym in m.symbols(shown=True):
-        if sym.name == "nm":
-            sol_facts += (str(sym).replace('nm', 'm') + '. ')
-        elif sym.name == "pr_impl":
-            sol_facts += (str(sym) + '. ')
-            pr_impl += [ sym ]
-        elif sym.name == "finished":
-            fin = True
-    steps += [ sol_facts ]
-    if fin:
-        has_finished = True
-        for p in pr_impl:
+    for p in m.symbols(shown=True):
+        if p.name == "pr_impl_unique":
             pid = str(p.arguments[0])
             pid_nums = list(map(int, re.findall(r'\d+', pid)))
             pid_nums.sort()
@@ -104,6 +89,10 @@ def onmodel_mccluskey(m):
                 prime_implicants[pid] = []
             if (pnm, pvl) not in prime_implicants[pid]:
                 prime_implicants[pid] += [(pnm, pvl)]
+        elif p.name == "pr_impl_covers":
+            # TODO: Use the covers predicate to build the next step automatically
+            #       Instead of processing the prime_implicants 
+            pass
 
 def onmodel_mincover(m):
     global mincover_total_coverage
@@ -165,10 +154,11 @@ def main():
                         help='route for the minterm text file')
     args = parser.parse_args()
 
-    steps += [input_to_asp(args.input_sample)]
-    current_step = 0
-    while not has_finished:
-        solve_mccluskey(steps[current_step], ["0"])
+    current_step = 1
+    mccluskey_sat = False
+    while not mccluskey_sat:
+        solution = solve_mccluskey(input_to_asp(args.input_sample), ["-c", "max_steps=" + str(current_step)])
+        mccluskey_sat = solution.satisfiable
         current_step += 1
 
     print("PRIME IMPLICANTS:")
