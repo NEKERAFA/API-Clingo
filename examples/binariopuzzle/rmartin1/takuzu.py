@@ -33,14 +33,17 @@ def solution_to_array(m, size):
                 solution[x-1][y-1] = 1
     return solution
 
-def pretty_board(board):
+def pretty_board(board, invert):
     retstr = ""
     for row in board:
         for tile in row:
-            if tile == 0:
-                retstr += u"\u25C7" + " "
-            else:
+            btile = bool(tile)
+            if invert:
+                btile = not btile
+            if btile:
                 retstr += u"\u25C6" + " "
+            else:
+                retstr += u"\u25C7" + " "
         retstr += "\n"
     return retstr
 
@@ -52,6 +55,8 @@ def main():
                         help='number of solutions requested, only one is provided by default. 0 means "all the solutions"')
     parser.add_argument('-s','--stats', action='store_true',
                         help='print solver stats')
+    parser.add_argument('-i','--invert', action='store_true',
+                        help='invert black/white when printing')
 
     args = parser.parse_args()
 
@@ -66,7 +71,7 @@ def main():
             board = solution_to_array(m, size)
             solutions += [board]
             print("SOLUTION #{0}:".format(m.number))
-            print(pretty_board(board))
+            print(pretty_board(board, args.invert))
 
     if args.stats:
         print("STATISTICS")

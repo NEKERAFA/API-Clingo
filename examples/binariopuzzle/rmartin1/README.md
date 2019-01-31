@@ -4,7 +4,7 @@
 Run ```python takuzu.py INPUT_FILE```. Python 3.x and clingo 5.x are required.
 For more options, use ```--help```.
 ```
-usage: takuzu.py [-h] [-n N] [-s] I
+usage: takuzu.py [-h] [-n N] [-s] [-i] I
 
 Solve some binarios
 
@@ -16,7 +16,7 @@ optional arguments:
   -n N, --num_sols N  number of solutions requested, only one is provided by
                       default. 0 means "all the solutions"
   -s, --stats         print solver stats
-
+  -i, --invert        invert black/white when printing
 ```
 
 ## Input
