@@ -2,19 +2,16 @@
 
 step(0..maxstep).
 cell(1..width, 1..height).
-extreme(C) :- tile(C), 1{tilein(C,D)}1.
-direction(up; down; right; left).
-dirmove(up, -1, 0). dirmove(down, 1, 0).
-dirmove(right, 0, 1). dirmove(left, 0, -1).
-
-cellcont(X, Y, C, 0) :- posini(C, X, Y).
+tileid(C) :- tiletype(C, _).
+extreme(C) :- tiletype(C, TT), 1{tilein(TT,D)}1.
+cellcont(X, Y, C, 0) :- cell(X,Y), C=Y+((X-1)*width)-1.
 
 %% Each step only generate a movement for one of the spaces in the board
 %% Movement can't go out of the board or into a bolted tile
 %% Do not generate movements if the circuit is closed
-1 { move(C, D, T) : space(C), cellcont(X,Y,C,T-1),
-          direction(D), dirmove(D, DX, DY),
-          cellcont(X+DX, Y+DY, DC, T-1), not bolted(DC) }1 :- step(T), T > 0, not closed(T-1).
+1 { move(C, D, T) : tiletype(C, space), cellcont(X,Y,C,T-1),
+          direction(D), dirmove(D, DX, DY), C != DC,
+          cellcont(X+DX, Y+DY, DC, T-1), not bolted(DC), not tiletype(DC, space) }1 :- step(T), T > 0, not closed(T-1).
 
 %% Move the tile we moved the blank space against in the opposite direction
 cellcont(X,Y,DC,T) :- cellcont(X,Y,C,T-1), cellcont(X+DX,Y+DY,DC,T-1), move(C,D,T), dirmove(D, DX, DY), step(T), T > 0.
@@ -30,7 +27,8 @@ cellcont(X,Y,C,T) :- cellcont(X,Y,C,T-1), not moved(C,T), dirmove(D, DX, DY), st
 %% 2. They have a pair of opposing tileins (e.g. T1 has down while T2 has up)
 %%    that follow that direcion (in the example they should be vertically adjacent)
 
-reach(C1, C2, T) :- cellcont(X1,Y1,C1,T), cellcont(X2,Y2,C2,T), tilein(C1, D1), tilein(C2, D2),
+reach(C1, C2, T) :- cellcont(X1,Y1,C1,T), cellcont(X2,Y2,C2,T),
+                    tiletype(C1, TT1), tiletype(C2, TT2), tilein(TT1, D1), tilein(TT2, D2),
                     dirmove(D1, D1X, D1Y), dirmove(D2, D2X, D2Y), D1X+D2X+D1Y+D2Y == 0,
                     D1 != D2, step(T), X2 == X1+D1X, Y2 == Y1+D1Y.
 
@@ -49,5 +47,6 @@ reachstars(S) :- #count{ C2: reach(C1,C2,T), extreme(C1), star(C2) }=S, step(max
 :- reachstars(S), S!=3.
 
 #show move/3.
-#show closed/1.
-#show reachstars/1.
+%#show reach/3.
+%#show closed/1.
+%#show reachstars/1.
