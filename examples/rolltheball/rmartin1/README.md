@@ -1,7 +1,7 @@
 # Roll the Ball in ASP
 
 ## Usage
-Run ```clingo roll.lp tiles.lp INPUT_FILE -c maxsteps=N```, with N being the
+Run ```clingo asp/roll.lp asp/tiles.lp INPUT_FILE -c maxsteps=N```, with N being the
 exact number of steps in which the puxxle must be solved. clingo 5.x is required.
 
 There is no parser for the input yet as I plan to develop a GUI for this one.
