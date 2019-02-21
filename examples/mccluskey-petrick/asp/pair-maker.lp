@@ -1,37 +1,34 @@
-#const maxsteps = 0.
-step(0..maxsteps).
+#include <incmode>.
 
-ex(X, A, V, 0) :- m(X, A, V).
-exid(X, S) :- ex(X, _, _, S).
+%% t = 0
+#program base.
+holds(m(X,A,V), 0):- m(X, A, V).
 
-adj(X,Y,S) :- exid(X,S), exid(Y,S), X<Y, #count{A: ex(X,A,V,S), ex(Y,A,W,S), V!=W}=1, step(S).
+%% t > 0
+#program step(t).
+holds(m((X,Y),A,x), t) :- adj(X,Y,t-1), holds(m(X,A,V),t-1), holds(m(Y,A,W),t-1), V!=W.
+holds(m((X,Y),A,V), t) :- adj(X,Y,t-1), holds(m(X,A,V),t-1), holds(m(Y,A,V),t-1).
 
-ex(r(X,Y),A,x,S+1) :- adj(X,Y,S), ex(X,A,V,S), ex(Y,A,W,S), V!=W, step(S), step(S+1).
-ex(r(X,Y),A,V,S+1) :- adj(X,Y,S), ex(X,A,V,S), ex(Y,A,V,S), step(S), step(S+1).
-
-primpl(X,A,V) :- exid(X,S), ex(X,A,V,S), not adj(X,_,S), not adj(_,X,S), step(S).
+%% t >= 0
+#program check(t).
+id(X) :- holds(m(X,A,V),t).
+adj(X,Y,t) :- id(X), id(Y), X<Y, #count{A: holds(m(X,A,V),t), holds(m(Y,A,W),t), V!=W}=1.
+covers((X,Y), X, 1) :- id((X,Y)).
+covers((X,Y), Y, 1) :- id((X,Y)).
+covers((X,Y), Z, t) :- id((X,Y)), covers(X, Z, t-1).
+covers((X,Y), Z, t) :- id((X,Y)), covers(Y, Z, t-1).
+primpl(X,A,V) :- id(X), holds(m(X,A,V),t), not adj(X,_,t), not adj(_,X,t).
 primplid(X) :- primpl(X,A,V).
-
-covers(r(X,Y), X, 1) :- exid(r(X,Y), 1).
-covers(r(X,Y), Y, 1) :- exid(r(X,Y), 1).
-
-covers(r(X,Y), Z, S) :- exid(r(X,Y), S), covers(X, Z, S-1), step(S), step(S-1).
-covers(r(X,Y), Z, S) :- exid(r(X,Y), S), covers(Y, Z, S-1), step(S), step(S-1).
-
-primplcvr(X, Z) :- primplid(X), covers(X, Z, _).
-
+primplcvr(X, Z) :- primplid(X), covers(X,Z,t).
 primplcard(X, C) :- primplcvr(X, Z), C=#count{A: primplcvr(X, A)}.
-
 primplequal(X, Y) :- primplcard(X, C), primplcard(Y, C), X < Y,
             #count{Z: primplcvr(X, Z), primplcvr(Y, Z)}=C.
+uprimplid(X) :- primplid(X), not primplequal(X, _), not primplequal(_, X).
+uprimplid(X) :- primplequal(X, _).
+uprimpl(X, A, V) :- primpl(X, A, V), uprimplid(X).
+uprimplcvr(X, Z) :- uprimplid(X), primplcvr(X, Z).
+:- query(t), adj(X,Y,t).
 
-uprimplid(X) :- primplid(X), not primplequal(X,_).
-uprimpl(X,A,V) :- uprimplid(X), primpl(X,A,V).
-uprimplcvr(X, Z) :- primplcvr(X, Z), uprimplid(X).
-
-finished(S) :- not adj(_,_,S), adj(_,_,S-1), step(S), step(S-1).
-
-:- not finished(maxsteps).
-
+#show uprimplid/1.
 #show uprimpl/3.
 #show uprimplcvr/2.

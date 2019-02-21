@@ -1,18 +1,36 @@
-impl_id(X) :- impl(X, _).
-m_id(I) :- impl(_, I).
+#include <incmode>.
 
-dupe_impl(I) :- impl_id(X), impl_id(Y), X<Y, impl(X, I), impl(Y, I).
+%% t = 0
+#program base.
+minid(X, 0) :- m(X, _, _).
+pimplid(X, 0) :- uprimplid(X).
 
-uni_impl(X) :- impl(X, I), not dupe_impl(I).
-covered_minterm(I) :- m_id(I), uni_impl(X), impl(X,I).
-uncovered_minterm(I) :- m_id(I), impl(X,I), not covered_minterm(I).
+%% t > 0
+#program step(t).
+pimplid(X, t) :- pimplid(X, t-1), not essnimplid(X, t-1).
+minid(Z, t) :- minid(Z, t-1), not usedminid(Z, t-1).
 
-essn_impl(X, I) :- impl(X,I), uni_impl(X).
-left_impl_id(X) :- impl(X,I), uncovered_minterm(I).
-left_impl(X, I) :- impl(X,I), left_impl_id(X).
+%% t >= 0
+#program check(t).
+mincount(Z, C, t) :- minid(Z, t), C=#count{X:uprimplcvr(X, Z)}.
+essnimplid(X, t) :- uprimplcvr(X, Z), mincount(Z, 1, t).
+usedminid(Z, t) :- essnimplid(X, t), uprimplcvr(X, Z).
+fullcover(t) :- minid(Z, t), usedminid(Z, t).
 
-total_coverage :- C=#count{I:m_id(I)}, D=#count{J:covered_minterm(J)}, C=D.
+:- query(t), essnimplid(X, t).
 
-#show essn_impl/2.
-#show left_impl/2.
-#show total_coverage/0.
+essnimplid(X) :- essnimplid(X, t).
+essnimplcvr(X, Z) :- essnimplid(X), uprimplcvr(X, Z).
+essnimpl(X, A, V) :- essnimplid(X), uprimpl(X, A, V).
+
+leftimplid(X) :- uprimplid(X), not essnimplid(X).
+leftimplcvr(X, Z) :- leftimplid(X), uprimplcvr(X, Z).
+leftimpl(X, A, V) :- leftimplid(X), uprimpl(X, A, V).
+
+#show fullcover/1.
+#show essnimplid/1.
+#show essnimplcvr/2.
+#show essnimpl/3.
+#show leftimplid/1.
+#show leftimplcvr/2.
+#show leftimpl/3.

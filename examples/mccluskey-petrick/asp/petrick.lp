@@ -1,16 +1,16 @@
-impl_id(X) :- impl(X, _).
-m_id(I) :- impl(_, I).
+overlapid(X, Y) :- leftimplcvr(X,Z), leftimplcvr(Y,Z), X<Y.
 
-overlapping_impl_ids(X, Y) :- impl(X,I), impl(Y,I), X<Y.
+1{ selectid(X):leftimplid(X) }.
 
-1{ selected_impl_id(X):impl(X,I) }.
+selectimplcvr(X, Z) :- selectid(X), leftimplcvr(X, Z).
+selectimpl(X, A, V) :- selectid(X), leftimpl(X, A, V).
 
-selected_impl(X, I) :- selected_impl_id(X), impl(X, I).
+fullcover :- C=#count{X:leftimplid(X)}, D=#count{Z:selectimplcvr(_,Z)}, C=D.
 
-total_coverage :- C=#count{I:m_id(I)}, D=#count{J:selected_impl(_,J)}, C=D.
+:- selectid(X), selectid(Y), X<Y, overlapid(X,Y).
+:- not fullcover.
 
-:- selected_impl_id(X), selected_impl_id(Y), X<Y, overlapping_impl_ids(X,Y).
-:- not total_coverage.
-
-#show selected_impl/2.
-#show total_coverage/0.
+#show selectid/1.
+#show selectimplcvr/2.
+#show selectimpl/3.
+#show fullcover/0.

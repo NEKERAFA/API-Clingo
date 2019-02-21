@@ -21,21 +21,44 @@ def input_to_asp(input_file):
                 asp_facts += "\n"
     return asp_facts
 
-def solve_prime_implicates(asp_facts):
-    current_step = 1
-    mccluskey_sat = False
-    while not mccluskey_sat:
-        # Start with step = 1 and increment until we find a solution
-        cc = clingo.Control(["-c", "maxsteps=" + str(current_step)])
-        cc.load("./asp/pair-maker.lp")
-        cc.add("base", [], asp_facts)
-        cc.ground([("base", [])])
-        with cc.solve(yield_=True) as handle:
+def symbols_to_facts(symbols):
+    return " ".join(["{0}.".format(sym) for sym in symbols])
+
+def solve(asp_program, asp_facts):
+    c = clingo.Control()
+    c.load("./asp/"+asp_program+".lp")
+    for facts in asp_facts:
+        c.add("base", [], facts)
+    c.ground([("base", [])])
+    ret = []
+    with c.solve(yield_=True) as handle:
+        for m in handle:
+            ret = m.symbols(shown=True)
+    return ret
+
+def solve_iter(asp_program, asp_facts):
+    c = clingo.Control()
+    c.add("check", ["k"], "#external query(k).")
+    c.load("./asp/"+asp_program+".lp")
+    for facts in asp_facts:
+        c.add("base", [], facts)
+
+    t, ret = 0, []
+    c.ground([("base", [])])
+    while True:
+        c.ground([("step", [t])])
+        c.ground([("check", [t])])
+        c.release_external(clingo.Function("query", [t-1]))
+        c.assign_external(clingo.Function("query", [t]), True)
+        # TODO: First call produces irrelevant info messages, look how to mute this
+        with c.solve(yield_=True) as handle:
             for m in handle:
-                prime_implicates = m.symbols(shown=True)
-            mccluskey_sat = (str(handle.get()) == "SAT")
-            current_step += 1
-    return prime_implicates
+                ret = m.symbols(shown=True)
+            if (handle.get().satisfiable):
+                break
+        t += 1
+    return ret
+
 
 def main():
     parser = argparse.ArgumentParser(description='Minterm reduction with ASP')
@@ -44,19 +67,26 @@ def main():
     args = parser.parse_args()
 
     # Turn minterms into ASP facts
-    facts = input_to_asp(args.input_sample)
-    primpl_syms = solve_prime_implicates(facts)
+    input_facts = input_to_asp(args.input_sample)
+    # Create the prime implicates
+    primpl_syms = solve_iter("pair-maker", [input_facts])
+    primpl_facts = symbols_to_facts(primpl_syms)
 
-    # At this point we have the prime implicates under pr_impl_unique
-    # and the minterms they cover under pr_impl_covers
-    cc = clingo.Control(["0"])
-    cc.load("./asp/rename.lp")
-    for s in primpl_syms:
-        cc.add("base", [], s)
-    cc.ground([("base", [])])
-    with cc.solve(yield_=True) as handle:
-        for m in handle:
-            print(m)
+    # Perform minimal coverage for the prime implicates
+    mincover_syms = solve_iter("min-cover", [input_facts, primpl_facts])
+    mincover_facts = symbols_to_facts(mincover_syms)
+
+    # If the minimal coverage doesn't cover all minterms, petrick it
+    if not any(sym.name == "fullcover" for sym in mincover_syms):
+        petrick_syms = solve("petrick", [mincover_facts])
+        petrick_facts = symbols_to_facts(petrick_syms)
+
+    print(mincover_facts)
+    print(petrick_facts)
+    print("FINISHED")
+
+
+
 
 if __name__ == "__main__":
     sys.settrace
