@@ -10,7 +10,8 @@ should be specified with an 'x' (i.e ```ab'c + a'b'``` translates to ```101 00x`
 The script will show the prime implicants for the provided minterms, extract the essential implicants and process the
 remaining implicants to achieve total coverage. In the case of multiple possible solutions, all of them will be specified.
 
-The output provides all of the possible minimized functions.
+The output provides all of the possible functions.
 
 ## TO DO
+* Explore ways to minimize the resulting functions 
 * Input files should contain boolean functions and not minterms?
