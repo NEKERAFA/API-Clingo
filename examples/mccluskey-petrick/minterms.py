@@ -2,6 +2,7 @@ import argparse
 import clingo
 import re
 import sys
+import subprocess
 
 def atom_name(idx, start):
     v = ord(start) + idx
@@ -59,9 +60,10 @@ def implicates_dict_formula(impdict):
         terms += ["(" + " ^ ".join(term) + ")"]
     return " v ".join(terms)
 
-def solve(asp_program, asp_facts):
-    c = clingo.Control(["0"])
-    c.load("./asp/"+asp_program+".lp")
+def solve(asp_program, asp_facts, clingo_args):
+    c = clingo.Control(clingo_args)
+    if asp_program != "":
+        c.load("./asp/"+asp_program+".lp")
     for facts in asp_facts:
         c.add("base", [], facts)
     c.ground([("base", [])])
@@ -99,6 +101,9 @@ def main():
     parser = argparse.ArgumentParser(description='Minterm reduction with ASP')
     parser.add_argument('input_sample', metavar='I', type=str,
                         help='route for the minterm text file')
+    parser.add_argument('-m','--minmode', default="triplet",
+                    choices=['atoms', 'terms', 'atoms-terms', 'subset', 'triplet'],
+                    help='formulae minimization method')
     args = parser.parse_args()
 
     # Turn minterms into ASP facts
@@ -108,30 +113,88 @@ def main():
     primpl_facts = symbols_to_facts(primpl_syms)
 
     # Perform minimal coverage for the prime implicates
-    mincover_syms = solve_iter("min-cover", [input_facts, primpl_facts])
+    mincover_syms = solve_iter("min-cover", [primpl_facts])
     mincover_facts = symbols_to_facts(mincover_syms)
 
     essndict, finaldicts = {}, []
+    essndict = implicates_to_dict(mincover_syms, "essn")
+    print("ESSENTIAL IMPLICATES")
+    print(implicates_dict_str(essndict))
     # If the minimal coverage doesn't cover all minterms, petrick it
-    if not any(sym.name == "fullcover" for sym in mincover_syms):
-        print("SECONDARY IMPLICATES")
-        petrick_solutions = solve("petrick", [mincover_facts])
+    if any(sym.name == "fullcover" for sym in mincover_syms):
+        finaldicts += [ essndict ]
+    else:
+        petrick_solutions = solve("petrick", [mincover_facts], ["0"])
         for idx,petrick_syms in enumerate(petrick_solutions):
             petrick_facts = symbols_to_facts(petrick_syms)
             if any(sym.name == "selectimplid" for sym in petrick_syms):
                 secdict = implicates_to_dict(petrick_syms, "select")
                 finaldictasy = { **essndict, **secdict }
                 finaldicts += [ finaldictasy ]
-                print("SOLUTION #{0}".format(idx))
-                print(implicates_dict_str(finaldictasy))
-                print(implicates_dict_formula(finaldictasy) + "\n")
-            else:
-                print("NO SECONDARY IMPLICATES")
+                print("OPTION #{0}".format(idx))
+                print("SECONDARY IMPLICATES")
+                print(implicates_dict_str(secdict))
+
+    # If more than one possible solution, obtain minimal formulae
+    # Depends on the specified minimization mode, some of them require an asprin call
+    if len(finaldicts) == 1:
+        print("MINIMIZED FORMULA")
+        print(implicates_dict_formula(finaldicts[0]))
     else:
-        print("ESSENTIAL IMPLICATES")
-        essndict = implicates_to_dict(mincover_syms, "essn")
-        print(implicates_dict_str(essndict))
-        print(implicates_dict_formula(essndict))
+        optmode, asprin, minimal_solutions = "", False, []
+        print(optmode)
+        if args.minmode == "atoms":
+            print("Minimizing formulae by shorter terms")
+            optmode = "less-atoms"
+        elif args.minmode == "terms":
+            print("Minimizing formulae by less terms")
+            optmode = "less-terms"
+        elif args.minmode == "atoms-terms":
+            print("Minimizing formulae by shorter terms and less atoms")
+            optmode = "less-atoms-terms"
+            asprin = True
+        elif args.minmode == "subset":
+            print("Minimizing formulae by subsets of terms")
+            optmode = "less-subset"
+            asprin = True
+        elif args.minmode == "triplet":
+            print("Minimizing formulae by subsets, shorter terms and less atoms")
+            optmode = "less-atoms-terms-subset"
+            asprin = True
+
+        minimize_facts = ""
+        for idx,impdict in enumerate(finaldicts):
+            asp = "solution({0}). ".format(idx)
+            for impl in impdict.keys():
+                for v in impdict[impl].keys():
+                    asp += "sol(impl({0},{1},{2}), {3}). ".format(impl, v, impdict[impl][v], idx)
+            minimize_facts += asp
+
+        if asprin:
+            with open("./tmp/minfacts.lp", "w") as aspfile:
+                aspfile.write(minimize_facts)
+            out = subprocess.check_output(["asprin", "asp/"+optmode+".lp", "tmp/minfacts.lp", "0"])
+            strout = out.decode()
+            answers = strout.split('Answer:')
+            for ans in answers:
+                if "OPTIMUM FOUND" in ans:
+                    match = re.search(r'(\d)\n([\s\S]*)\nOPTIMUM FOUND', ans)
+                    solno, preds = match.group(1), match.group(2)
+                    preds = ". ".join(preds.split(" "))+"."
+                    minimal_solutions += solve("", [preds], ["0"])
+        else:
+            minimal_solutions = solve(optmode, [minimize_facts], ["--opt-mode=optN","-n0"])
+            # The first solution appears two times, so drop it
+            minimal_solutions = minimal_solutions[1:]
+
+        # Iterate and print minimized formulae
+        for idx,sol in enumerate(minimal_solutions):
+            seldict = implicates_to_dict(sol, "select")
+            print("MINIMIZED FORMULA #{0}".format(idx))
+            print(implicates_dict_formula(seldict) + "\n")
+
+
+
 
 
 if __name__ == "__main__":

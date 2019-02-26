@@ -3,6 +3,7 @@
 %% t = 0
 #program base.
 holds(m(X,A,V), 0):- m(X, A, V).
+covers(X, X, 0) :- m(X, A, V).
 
 %% t > 0
 #program step(t).

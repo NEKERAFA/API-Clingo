@@ -2,7 +2,7 @@
 
 %% t = 0
 #program base.
-minid(X, 0) :- m(X, _, _).
+minid(Z, 0) :- uprimplcvr(_, Z).
 pimplid(X, 0) :- uprimplid(X).
 pimplcvr(X, Z, 0) :- uprimplcvr(X, Z).
 
