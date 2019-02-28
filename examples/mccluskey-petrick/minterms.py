@@ -192,11 +192,7 @@ def main():
             seldict = implicates_to_dict(sol, "select")
             print("MINIMIZED FORMULA #{0}".format(idx))
             print(implicates_dict_formula(seldict) + "\n")
-
-
-
-
-
+            
 if __name__ == "__main__":
     sys.settrace
     main()
