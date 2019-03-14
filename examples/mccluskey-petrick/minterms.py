@@ -74,26 +74,28 @@ def solve(asp_program, asp_facts, clingo_args):
     return ret
 
 def solve_iter(asp_program, asp_facts):
-    c = clingo.Control()
-    c.add("check", ["k"], "#external query(k).")
-    c.load("./asp/"+asp_program+".lp")
-    for facts in asp_facts:
-        c.add("base", [], facts)
+    prg = clingo.Control([])
+    prg.add("check", ["k"], "#external query(k).")
+    prg.load("./asp/"+asp_program+".lp")
+    for f in asp_facts:
+        prg.add("base", [], f)
 
-    t, ret = 0, []
-    c.ground([("base", [])])
-    while True:
-        c.ground([("step", [t])])
-        c.ground([("check", [t])])
-        c.release_external(clingo.Function("query", [t-1]))
-        c.assign_external(clingo.Function("query", [t]), True)
-        # TODO: First call produces irrelevant info messages, look how to mute this
-        with c.solve(yield_=True) as handle:
-            for m in handle:
-                ret = m.symbols(shown=True)
-            if (handle.get().satisfiable):
-                break
-        t += 1
+    step, handle, ret = 0, None, []
+    while ( step == 0 or not handle.get().satisfiable ):
+        parts = []
+        parts.append(("check", [step]))
+        if step > 0:
+            prg.release_external(clingo.Function("query", [step-1]))
+            parts.append(("step", [step]))
+            prg.cleanup()
+        else:
+            parts.append(("base", []))
+        prg.ground(parts)
+        prg.assign_external(clingo.Function("query", [step]), True)
+        step += 1
+        handle = prg.solve(yield_=True)
+        for m in handle:
+            ret = m.symbols(shown=True)
     return ret
 
 
@@ -104,6 +106,8 @@ def main():
     parser.add_argument('-m','--minmode', default="triplet",
                     choices=['atoms', 'terms', 'atoms-terms', 'subset', 'triplet'],
                     help='formulae minimization method')
+    parser.add_argument('-a', '--all', action='store_true', default=False,
+                    help='enumerate all optimal models')
     args = parser.parse_args()
 
     # Turn minterms into ASP facts
@@ -173,7 +177,10 @@ def main():
         if asprin:
             with open("./tmp/minfacts.lp", "w") as aspfile:
                 aspfile.write(minimize_facts)
-            out = subprocess.check_output(["asprin", "asp/"+optmode+".lp", "tmp/minfacts.lp", "0"])
+            if args.all:
+                out = subprocess.check_output(["asprin", "asp/"+optmode+".lp", "tmp/minfacts.lp", "0"])
+            else:
+                out = subprocess.check_output(["asprin", "asp/"+optmode+".lp", "tmp/minfacts.lp"])
             strout = out.decode()
             answers = strout.split('Answer:')
             for ans in answers:
@@ -183,16 +190,19 @@ def main():
                     preds = ". ".join(preds.split(" "))+"."
                     minimal_solutions += solve("", [preds], ["0"])
         else:
-            minimal_solutions = solve(optmode, [minimize_facts], ["--opt-mode=optN","-n0"])
-            # The first solution appears two times, so drop it
-            minimal_solutions = minimal_solutions[1:]
+            if args.all:
+                minimal_solutions = solve(optmode, [minimize_facts], ["--opt-mode=optN","-n0"])
+                # The first solution appears two times, so drop it
+                minimal_solutions = minimal_solutions[1:]
+            else:
+                minimal_solutions = solve(optmode, [minimize_facts], [])
 
         # Iterate and print minimized formulae
         for idx,sol in enumerate(minimal_solutions):
             seldict = implicates_to_dict(sol, "select")
             print("MINIMIZED FORMULA #{0}".format(idx))
             print(implicates_dict_formula(seldict) + "\n")
-            
+
 if __name__ == "__main__":
     sys.settrace
     main()

@@ -18,16 +18,18 @@ covers((X,Y), X, 1) :- id((X,Y)).
 covers((X,Y), Y, 1) :- id((X,Y)).
 covers((X,Y), Z, t) :- id((X,Y)), covers(X, Z, t-1).
 covers((X,Y), Z, t) :- id((X,Y)), covers(Y, Z, t-1).
+
 primpl(X,A,V) :- id(X), holds(m(X,A,V),t), not adj(X,_,t), not adj(_,X,t).
 primplid(X) :- primpl(X,A,V).
 primplcvr(X, Z) :- primplid(X), covers(X,Z,t).
 primplcard(X, C) :- primplcvr(X, Z), C=#count{A: primplcvr(X, A)}.
 primplequal(X, Y) :- primplcard(X, C), primplcard(Y, C), X < Y,
             #count{Z: primplcvr(X, Z), primplcvr(Y, Z)}=C.
-uprimplid(X) :- primplid(X), not primplequal(X, _), not primplequal(_, X).
-uprimplid(X) :- primplequal(X, _).
+
+uprimplid(X) :- primplid(X), primplequal(X, _), not primplequal(_, X).
 uprimpl(X, A, V) :- primpl(X, A, V), uprimplid(X).
 uprimplcvr(X, Z) :- uprimplid(X), primplcvr(X, Z).
+
 :- query(t), adj(X,Y,t).
 
 #show uprimplid/1.
