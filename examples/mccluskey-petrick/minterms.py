@@ -12,14 +12,19 @@ def atom_name(idx, start):
 
 def input_to_asp(input_file):
     asp_facts = ""
+    onset = True
     with open(input_file) as input_text:
         for line in input_text:
-            if re.match('^[01]+\s*$', line):
+            if re.match('^[01x]+\s*$', line):
                 m = line.strip()
-                i = int(m.replace('x','0'), 2)
+                i = int(m.replace('x', '0'), 2)
+                if (not onset):
+                    asp_facts += "dcid({0}). ".format(i)
                 for idx,bit in enumerate(m):
                     asp_facts += "m({0}, {1}, {2}). ".format(i, atom_name(idx, 'p'), bit)
                 asp_facts += "\n"
+            elif re.match('^d\s*$', line):
+                onset = False
     return asp_facts
 
 def symbols_to_facts(symbols):
@@ -112,6 +117,7 @@ def main():
 
     # Turn minterms into ASP facts
     input_facts = input_to_asp(args.input_sample)
+
     # Create the prime implicates
     primpl_syms = solve_iter("pair-maker", [input_facts])
     primpl_facts = symbols_to_facts(primpl_syms)

@@ -13,22 +13,26 @@ holds(m((X,Y),A,V), t) :- adj(X,Y,t-1), holds(m(X,A,V),t-1), holds(m(Y,A,V),t-1)
 %% t >= 0
 #program check(t).
 id(X) :- holds(m(X,A,V),t).
-adj(X,Y,t) :- id(X), id(Y), X<Y, #count{A: holds(m(X,A,V),t), holds(m(Y,A,W),t), V!=W}=1.
-covers((X,Y), X, 1) :- id((X,Y)).
-covers((X,Y), Y, 1) :- id((X,Y)).
+ones(X, C) :- id(X), C=#count{A: holds(m(X, A, 1), t) }.
+exes(X, C) :- id(X), C=#count{A: holds(m(X, A, x), t) }.
+
+adj(X,Y,t) :- ones(X, C), ones(Y, C+1), X<Y,
+                #count{A: holds(m(X,A,V),t), holds(m(Y,A,W),t), V!=W}=1.
+
 covers((X,Y), Z, t) :- id((X,Y)), covers(X, Z, t-1).
 covers((X,Y), Z, t) :- id((X,Y)), covers(Y, Z, t-1).
 
-primpl(X,A,V) :- id(X), holds(m(X,A,V),t), not adj(X,_,t), not adj(_,X,t).
-primplid(X) :- primpl(X,A,V).
-primplcvr(X, Z) :- primplid(X), covers(X,Z,t).
-primplcard(X, C) :- primplcvr(X, Z), C=#count{A: primplcvr(X, A)}.
-primplequal(X, Y) :- primplcard(X, C), primplcard(Y, C), X < Y,
-            #count{Z: primplcvr(X, Z), primplcvr(Y, Z)}=C.
+used(X) :- adj(X,Y, _).
+used(Y) :- adj(X,Y, _).
 
-uprimplid(X) :- primplid(X), primplequal(X, _), not primplequal(_, X).
-uprimpl(X, A, V) :- primpl(X, A, V), uprimplid(X).
-uprimplcvr(X, Z) :- uprimplid(X), primplcvr(X, Z).
+unused(X) :- id(X), not used(X).
+unusedequal(X, Y) :- exes(X, C), exes(Y, C), X < Y,
+            #count{Z: covers(X, Z, t), covers(Y, Z, t) }=(2**C).
+
+uprimplid(X) :- unused(X), unusedequal(X, _), not unusedequal(_, X).
+uprimplid(X) :- unused(X), not unusedequal(X, _), not unusedequal(_, X).
+uprimpl(X, A, V) :- holds(m(X,A,V), _), uprimplid(X).
+uprimplcvr(X, Z) :- uprimplid(X), covers(X, Z, _), not dcid(Z).
 
 :- query(t), adj(X,Y,t).
 
