@@ -41,25 +41,10 @@ def implicates_dict_str(impdict):
     ret = ""
     for i,k in enumerate(impdict.keys()):
         ret += "[{0}] {1}: ".format(i,k)
-        for kk in reversed(sorted(impdict[k])):
+        for kk in sorted(impdict[k]):
             ret += str(impdict[k][kk]).replace('x', '-')
         ret += "\n"
     return ret
-
-def implicates_dict_formula(impdict):
-    terms = []
-    for k in impdict.keys():
-        term = []
-        for kk in reversed(sorted(impdict[k])):
-            ts = ""
-            v = str(impdict[k][kk])
-            if v == "0":
-                ts += "not "
-            if v != "x":
-                ts += str(kk)
-                term += [ts]
-        terms += ["(" + " ^ ".join(term) + ")"]
-    return " v ".join(terms)
 
 def output_dict_pla(odict, idict):
     ostr = ""
@@ -120,8 +105,6 @@ def main():
     parser.add_argument('-m','--minmode', default="terms",
                     choices=['atoms', 'terms'],
                     help='formulae minimization method')
-    parser.add_argument('-a', '--all', action='store_true', default=False,
-                    help='enumerate all optimal models')
     args = parser.parse_args()
 
     try:
@@ -164,12 +147,9 @@ def main():
             outputs += [ essndict ]
         else:
             optmode, asprin, minimal_solutions = "", False, []
-            print(optmode)
             if args.minmode == "atoms":
-                print("Minimizing formulae by shorter terms")
                 optmode = "less-atoms"
             elif args.minmode == "terms":
-                print("Minimizing formulae by less terms")
                 optmode = "less-terms"
 
             minimize_facts = ""
@@ -180,21 +160,17 @@ def main():
                         asp += "sol(impl({0},{1},{2}), {3}). ".format(impl, v, impdict[impl][v], idx)
                 minimize_facts += asp
 
-            if args.all:
-                minimal_solutions = solve(optmode, [minimize_facts], ["--opt-mode=optN","-n0"])
-                # The first solution appears two times, so drop it
-                minimal_solutions = minimal_solutions[1:]
-            else:
-                minimal_solutions = solve(optmode, [minimize_facts], [])
-
-            #TODO: print optimal PLA, one of them
+            minimal_solutions = solve(optmode, [minimize_facts], [])
+            mindict =  implicates_to_dict(minimal_solutions[0], "select")
+            outputs += [mindict]
 
     pladict = {}
     for idx,o in enumerate(outputs):
         for k,v in o.items():
             val = ""
-            for kk in reversed(sorted(o[k])):
+            for kk in sorted(o[k]):
                 val += str(o[k][kk]).replace('x','-')
+            print(val)
             if not val in pladict.keys():
                 pladict.update({val: ["0"]*len(outputs)})
             pladict[val][idx] = "1"

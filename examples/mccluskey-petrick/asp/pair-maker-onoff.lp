@@ -20,7 +20,7 @@ holds(on(X,A,V), 0):- on(X, A, V).
 
 %% t > 0
 #program step(t).
-holds(on((X,A), A, x), t) :- holds(on(X,A,V),t-1), not nadj(X,_,A,t-1), not usedatom(X,A,t-1).
+holds(on((X,A), A, x), t) :- holds(on(X,A,V),t-1), V!=x, not nadj(X,_,A,t-1).
 holds(on((X,A), B, V), t) :- holds(on(X,B,V),t-1), B!=A, onid((X,A), t), not nadj(X,_,A,t-1).
 
 
@@ -33,8 +33,8 @@ nadj(X,Y,A,t) :- holds(on(X,A,V),t), off(Y,A,W), pair(V,W,x),
                 0=#count{ B: holds(on(X,B,BV),t), off(Y,B,BW), A!=B, pair(BV, BW, x) }.
 
 :- query(t), nadj(X,Y,A,t).
+:- query(t), not primeid(_,t).
 
-usedatom(X,A,t) :- holds(on(X, A, x),t).
 primeid(X,t) :- onid(X,t-1), not onid((X,_), t).
 
 %% Esto usa t como delimitador para comparar y seguramente no funcione con - en input
