@@ -5,7 +5,7 @@ Run ```python minterms.py INPUT_FILE```. Python 3.x and clingo 5.x are required.
 
 The input file must contain the terms of the function to minimize in their binary representation, one term per line.
 See the samples at the provided input folder for reference. The script can also handle already grouped values, these
-should be specified with an 'x' (i.e ```ab'c + a'b'``` translates to ```101 00x```)
+should be specified with an 'x' or an '-' (i.e ```ab'c + a'b'``` translates to ```101 00x```)
 
 These input files specify the on-set for the logic formula and optionally the dont-care-set, with the offset
 being left out as it would be the complimentary set of minterms of the union of the on-set and dont-care-set.

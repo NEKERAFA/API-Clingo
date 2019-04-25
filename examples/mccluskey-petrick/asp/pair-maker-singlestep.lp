@@ -1,5 +1,6 @@
 %% ID of the present minterms
 id(X) :- m(X, _, _).
+level(1..N) :- N=#count{ A: m(X,A,V) }.
 
 %% How many ones and xs does the minterm have
 ones(X, C) :- id(X), C=#count{ A:m(X, A, 1) }.
@@ -14,5 +15,5 @@ match(X, Y) :- ones(X, CX), ones(Y, CY), CX == CY-1,
 adj(X, Y) :- match(X, Y), 1=#count{ A: m(X, A, V), m(Y, A, W), V != W }.
 
 %% Generate the new minterm
-m((X,Y), A, x) :- adj(X, Y), m(X, A, V), m(Y, A, W), V!=W.
-m((X,Y), A, V) :- adj(X, Y), m(X, A, V), m(Y, A, W), V==W.
+%m((X,Y), A, x) :- adj(X, Y), m(X, A, V), m(Y, A, W), V!=W.
+%m((X,Y), A, V) :- adj(X, Y), m(X, A, V), m(Y, A, W), V==W.
